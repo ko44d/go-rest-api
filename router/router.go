@@ -10,8 +10,8 @@ import (
 func NewRouter(uc controller.IUserController, tc controller.ITaskController) *echo.Echo {
 	e := echo.New()
 	e.POST("/signup", uc.SignUp)
-	e.POST("login", uc.LogIn)
-	e.POST("logout", uc.LogOut)
+	e.POST("login", uc.Login)
+	e.POST("logout", uc.Logout)
 
 	t := e.Group("/tasks")
 
