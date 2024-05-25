@@ -1,0 +1,59 @@
+package usecase
+
+import (
+	"github.com/golang-jwt/jwt/v4"
+	"github.com/ko44d/go-rest-api/model"
+	"github.com/ko44d/go-rest-api/repository"
+	"golang.org/x/crypto/bcrypt"
+	"os"
+	"time"
+)
+
+type IUserUsecase interface {
+	SignUp(user model.User) (model.UserResponse, error)
+	Login(user model.User) (string, error)
+}
+
+type userUsecase struct {
+	ur repository.IUserRepository
+}
+
+func NewUserUsecase(userRepository repository.IUserRepository) IUserUsecase {
+	return &userUsecase{ur: userRepository}
+}
+
+func (uu *userUsecase) SignUp(user model.User) (model.UserResponse, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
+	if err != nil {
+		return model.UserResponse{}, err
+	}
+	newUser := model.User{Email: user.Email, Password: string(hash)}
+	if err := uu.ur.CreateUser(&newUser); err != nil {
+		return model.UserResponse{}, err
+	}
+	userResponse := model.UserResponse{
+		ID:    newUser.ID,
+		Email: newUser.Email,
+	}
+	return userResponse, nil
+}
+
+func (uu *userUsecase) Login(user model.User) (string, error) {
+	staredUser := model.User{}
+	if err := uu.ur.GetUserByEmail(&staredUser, user.Email); err != nil {
+		return "", err
+	}
+	err := bcrypt.CompareHashAndPassword([]byte(staredUser.Password), []byte(user.Password))
+	if err != nil {
+		return "", err
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": user.ID,
+		"exp":     time.Now().Add(time.Hour * 12).Unix(),
+	})
+	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
+	if err != nil {
+		return "", err
+	}
+	return tokenString, nil
+}
