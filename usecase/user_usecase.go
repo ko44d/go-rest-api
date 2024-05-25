@@ -39,16 +39,16 @@ func (uu *userUsecase) SignUp(user model.User) (model.UserResponse, error) {
 }
 
 func (uu *userUsecase) Login(user model.User) (string, error) {
-	staredUser := model.User{}
-	if err := uu.ur.GetUserByEmail(&staredUser, user.Email); err != nil {
+	storedUser := model.User{}
+	if err := uu.ur.GetUserByEmail(&storedUser, user.Email); err != nil {
 		return "", err
 	}
-	err := bcrypt.CompareHashAndPassword([]byte(staredUser.Password), []byte(user.Password))
+	err := bcrypt.CompareHashAndPassword([]byte(storedUser.Password), []byte(user.Password))
 	if err != nil {
 		return "", err
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
+		"user_id": storedUser.ID,
 		"exp":     time.Now().Add(time.Hour * 12).Unix(),
 	})
 	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
